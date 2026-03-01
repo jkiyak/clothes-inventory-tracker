@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clothes Inventory Tracker</title>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1552.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .button {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .button:hover {
+            background: #5568d3;
+        }
+
+        .button-secondary {
+            background: #6c757d;
+        }
+
+        .button-secondary:hover {
+            background: #5a6268;
+        }
+
+        .button-danger {
+            background: #dc3545;
+        }
+
+        .button-danger:hover {
+            background: #c82333;
+        }
+
+        .clothes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .clothes-item {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+
+        .clothes-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .clothes-item.needs-wash {
+            border-color: #ffc107;
+            background: #fff9e6;
+        }
+
+        .clothes-item h3 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 1.2em;
+        }
+
+        .clothes-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .clothes-info {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .clothes-info strong {
+            color: #333;
+        }
+
+        .clothes-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .clothes-actions button {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .wash-group {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .wash-group h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .wash-group-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .wash-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .checkbox-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .checkbox-item:hover {
+            background: #e9ecef;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 12px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .clothes-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👕 Clothes Inventory Tracker</h1>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('log')">Daily Log</button>
+            <button class="tab-button" onclick="switchTab('inventory')">Inventory</button>
+            <button class="tab-button" onclick="switchTab('wash')">Ready to Wash</button>
+            <button class="tab-button" onclick="switchTab('add')">Add New Item</button>
+        </div>
+
+        <!-- Daily Log Tab -->
+        <div id="log" class="tab-content active">
+            <div class="card">
+                <h2 style="margin-bottom: 20px;">What did you wear today?</h2>
+                <div id="logCheckboxes" class="checkbox-list"></div>
+                <button class="button" onclick="logWear()" style="margin-top: 20px;">Log Today's Wear</button>
+            </div>
+        </div>
+
+        <!-- Inventory Tab -->
+        <div id="inventory" class="tab-content">
+            <div class="stats" id="stats"></div>
+            <div class="card">
+                <h2 style="margin-bottom: 20px;">Your Clothes</h2>
+                <div id="clothesList" class="clothes-grid"></div>
+            </div>
+        </div>
+
+        <!-- Wash Tab -->
+        <div id="wash" class="tab-content">
+            <div class="card">
+                <h2 style="margin-bottom: 20px;">Grouped by Care Instructions</h2>
+                <div id="washGroups"></div>
+            </div>
+        </div>
+
+        <!-- Add New Item Tab -->
+        <div id="add" class="tab-content">
+            <div class="card">
+                <h2 style="margin-bottom: 20px;">Add New Clothing Item</h2>
+                <form onsubmit="addClothingItem(event)">
+                    <input type="hidden" id="editingItemId" value="">
+                    
+                    <div class="form-group">
+                        <label for="itemName">Item Name *</label>
+                        <input type="text" id="itemName" required placeholder="e.g., Blue Jeans, White T-Shirt">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="brand">Brand</label>
+                        <input type="text" id="brand" placeholder="e.g., Nike, Levi's, H&M">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">Category *</label>
+                        <select id="category" required>
+                            <option value="">Select category...</option>
+                            <option value="Tops">Tops</option>
+                            <option value="Bottoms">Bottoms</option>
+                            <option value="Dresses">Dresses</option>
+                            <option value="Outerwear">Outerwear</option>
+                            <option value="Underwear">Underwear</option>
+                            <option value="Activewear">Activewear</option>
+                            <option value="Formal">Formal</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="color">Color</label>
+                        <input type="text" id="color" placeholder="e.g., Blue, Black, White">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itemImage">Photo (Optional)</label>
+                        <input type="file" id="itemImage" accept="image/*">
+                        <small style="color: #666; display: block; margin-top: 5px;">Upload a photo of this item. Keep images small for best performance.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="washTemp">Wash Temperature *</label>
+                        <select id="washTemp" required>
+                            <option value="">Select temperature...</option>
+                            <option value="Cold">Cold</option>
+                            <option value="Warm">Warm</option>
+                            <option value="Hot">Hot</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dryMethod">Dry Method *</label>
+                        <select id="dryMethod" required>
+                            <option value="">Select method...</option>
+                            <option value="No Heat">No Heat / Air Dry</option>
+                            <option value="Low Heat">Low Heat</option>
+                            <option value="Medium Heat">Medium Heat</option>
+                            <option value="High Heat">High Heat</option>
+                            <option value="Hang Dry">Hang Dry</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="specialCare">Special Care Instructions</label>
+                        <textarea id="specialCare" placeholder="e.g., Turn inside out, Wash separately, Delicate cycle"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="wearsBetweenWash">Wears Before Wash *</label>
+                        <input type="number" id="wearsBetweenWash" min="1" value="1" required>
+                        <small style="color: #666; display: block; margin-top: 5px;">How many times can you wear this before it needs washing?</small>
+                    </div>
+
+                    <button type="submit" class="button" id="submitButton">Add Item</button>
+                    <button type="button" class="button button-secondary" id="cancelEditButton" onclick="cancelEdit()" style="display: none; margin-left: 10px;">Cancel</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // AWS S3 Configuration
+        const S3_CONFIG = {
+            bucketName: 'YOUR-BUCKET-NAME-HERE',
+            region: 'us-east-1',  // Change to your bucket region
+            accessKeyId: 'YOUR_ACCESS_KEY_ID_HERE',
+            secretAccessKey: 'YOUR_SECRET_ACCESS_KEY_HERE'
+        };
+
+        // Initialize AWS S3
+        AWS.config.update({
+            accessKeyId: S3_CONFIG.accessKeyId,
+            secretAccessKey: S3_CONFIG.secretAccessKey,
+            region: S3_CONFIG.region
+        });
+
+        const s3 = new AWS.S3();
+
+        // Upload image to S3
+        async function uploadImageToS3(file) {
+            const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+            
+            const params = {
+                Bucket: S3_CONFIG.bucketName,
+                Key: fileName,
+                Body: file,
+                ContentType: file.type
+            };
+
+            try {
+                const data = await s3.upload(params).promise();
+                return data.Location; // Returns the public URL
+            } catch (error) {
+                console.error('S3 Upload Error:', error);
+                alert('Failed to upload image. Please try again.');
+                return null;
+            }
+        }
+
+        // Initialize data storage
+        let clothesInventory = JSON.parse(localStorage.getItem('clothesInventory')) || [];
+
+        // Switch tabs
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+
+            // Refresh content
+            if (tabName === 'log') renderLogTab();
+            if (tabName === 'inventory') renderInventory();
+            if (tabName === 'wash') renderWashGroups();
+        }
+
+        // Add new clothing item or update existing
+        async function addClothingItem(event) {
+            event.preventDefault();
+
+            const editingId = document.getElementById('editingItemId').value;
+            const imageFile = document.getElementById('itemImage').files[0];
+            
+            // Function to create/update the item (with or without image)
+            const saveItem = async (imageUrl = null) => {
+                const itemData = {
+                    name: document.getElementById('itemName').value,
+                    brand: document.getElementById('brand').value,
+                    category: document.getElementById('category').value,
+                    color: document.getElementById('color').value,
+                    washTemp: document.getElementById('washTemp').value,
+                    dryMethod: document.getElementById('dryMethod').value,
+                    specialCare: document.getElementById('specialCare').value,
+                    wearsBetweenWash: parseInt(document.getElementById('wearsBetweenWash').value)
+                };
+
+                if (editingId) {
+                    // Update existing item
+                    const item = clothesInventory.find(i => i.id === parseInt(editingId));
+                    if (item) {
+                        Object.assign(item, itemData);
+                        // Only update image if a new one was selected
+                        if (imageUrl) {
+                            item.image = imageUrl;
+                        }
+                    }
+                    alert('Item updated successfully!');
+                } else {
+                    // Create new item
+                    const newItem = {
+                        id: Date.now(),
+                        ...itemData,
+                        image: imageUrl,
+                        timesWorn: 0,
+                        wearsSinceWash: 0,
+                        lastWashed: new Date().toISOString(),
+                        dateAdded: new Date().toISOString()
+                    };
+                    clothesInventory.push(newItem);
+                    alert('Item added successfully!');
+                }
+
+                saveData();
+                event.target.reset();
+                document.getElementById('editingItemId').value = '';
+                document.getElementById('submitButton').textContent = 'Add Item';
+                document.getElementById('cancelEditButton').style.display = 'none';
+                renderInventory();
+            };
+
+            // If there's an image, upload to S3
+            if (imageFile) {
+                // Show uploading message
+                const submitBtn = document.getElementById('submitButton');
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Uploading image...';
+                submitBtn.disabled = true;
+
+                const imageUrl = await uploadImageToS3(imageFile);
+                
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+
+                if (imageUrl) {
+                    await saveItem(imageUrl);
+                } else {
+                    alert('Image upload failed. Item not saved.');
+                }
+            } else {
+                await saveItem();
+            }
+        }
+
+        // Edit an existing item
+        function editItem(itemId) {
+            const item = clothesInventory.find(i => i.id === itemId);
+            if (!item) return;
+
+            // Switch to Add tab
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-button')[3].classList.add('active'); // Add New Item tab
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById('add').classList.add('active');
+
+            // Populate form with item data
+            document.getElementById('editingItemId').value = item.id;
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('brand').value = item.brand || '';
+            document.getElementById('category').value = item.category;
+            document.getElementById('color').value = item.color || '';
+            document.getElementById('washTemp').value = item.washTemp;
+            document.getElementById('dryMethod').value = item.dryMethod;
+            document.getElementById('specialCare').value = item.specialCare || '';
+            document.getElementById('wearsBetweenWash').value = item.wearsBetweenWash;
+
+            // Update UI
+            document.getElementById('submitButton').textContent = 'Update Item';
+            document.getElementById('cancelEditButton').style.display = 'inline-block';
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Cancel editing
+        function cancelEdit() {
+            document.querySelector('form').reset();
+            document.getElementById('editingItemId').value = '';
+            document.getElementById('submitButton').textContent = 'Add Item';
+            document.getElementById('cancelEditButton').style.display = 'none';
+        }
+
+        // Render daily log tab
+        function renderLogTab() {
+            const container = document.getElementById('logCheckboxes');
+            
+            if (clothesInventory.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No clothes in inventory yet. Add some items first!</p></div>';
+                return;
+            }
+
+            container.innerHTML = clothesInventory.map(item => `
+                <div class="checkbox-item">
+                    <input type="checkbox" id="log_${item.id}" value="${item.id}">
+                    <label for="log_${item.id}">
+                        <strong>${item.name}</strong><br>
+                        <small>${item.brand ? item.brand + ' • ' : ''}${item.category}${item.color ? ' • ' + item.color : ''}</small>
+                    </label>
+                </div>
+            `).join('');
+        }
+
+        // Log wear
+        function logWear() {
+            const checkedItems = document.querySelectorAll('#logCheckboxes input[type="checkbox"]:checked');
+            
+            if (checkedItems.length === 0) {
+                alert('Please select at least one item!');
+                return;
+            }
+
+            checkedItems.forEach(checkbox => {
+                const itemId = parseInt(checkbox.value);
+                const item = clothesInventory.find(i => i.id === itemId);
+                if (item) {
+                    item.timesWorn++;
+                    item.wearsSinceWash++;
+                }
+            });
+
+            saveData();
+            alert(`Logged ${checkedItems.length} item(s)!`);
+            
+            // Uncheck all boxes
+            checkedItems.forEach(cb => cb.checked = false);
+        }
+
+        // Render inventory
+        function renderInventory() {
+            const statsContainer = document.getElementById('stats');
+            const listContainer = document.getElementById('clothesList');
+
+            // Calculate stats
+            const totalItems = clothesInventory.length;
+            const needsWash = clothesInventory.filter(item => item.wearsSinceWash >= item.wearsBetweenWash).length;
+            const totalWears = clothesInventory.reduce((sum, item) => sum + item.timesWorn, 0);
+
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${totalItems}</div>
+                    <div class="stat-label">Total Items</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${needsWash}</div>
+                    <div class="stat-label">Needs Wash</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${totalWears}</div>
+                    <div class="stat-label">Total Wears</div>
+                </div>
+            `;
+
+            if (clothesInventory.length === 0) {
+                listContainer.innerHTML = '<div class="empty-state"><p>No clothes in inventory yet.</p></div>';
+                return;
+            }
+
+            listContainer.innerHTML = clothesInventory.map(item => {
+                const needsWash = item.wearsSinceWash >= item.wearsBetweenWash;
+                const daysSinceWash = Math.floor((new Date() - new Date(item.lastWashed)) / (1000 * 60 * 60 * 24));
+
+                return `
+                    <div class="clothes-item ${needsWash ? 'needs-wash' : ''}">
+                        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="clothes-image">` : ''}
+                        <h3>${item.name}</h3>
+                        ${item.brand ? `<div class="clothes-info"><strong>Brand:</strong> ${item.brand}</div>` : ''}
+                        <div class="clothes-info"><strong>Category:</strong> ${item.category}</div>
+                        ${item.color ? `<div class="clothes-info"><strong>Color:</strong> ${item.color}</div>` : ''}
+                        <div class="clothes-info"><strong>Times Worn:</strong> ${item.timesWorn}</div>
+                        <div class="clothes-info"><strong>Wears Since Wash:</strong> ${item.wearsSinceWash} / ${item.wearsBetweenWash}</div>
+                        <div class="clothes-info"><strong>Last Washed:</strong> ${daysSinceWash} days ago</div>
+                        ${needsWash ? '<div class="clothes-info" style="color: #ff9800; font-weight: bold;">⚠️ Needs Wash!</div>' : ''}
+                        <div class="clothes-actions">
+                            <button class="button" onclick="markAsWashed(${item.id})">Mark Washed</button>
+                            <button class="button button-secondary" onclick="editItem(${item.id})">Edit</button>
+                            <button class="button button-danger" onclick="deleteItem(${item.id})">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render wash groups
+        function renderWashGroups() {
+            const container = document.getElementById('washGroups');
+            const needsWash = clothesInventory.filter(item => item.wearsSinceWash >= item.wearsBetweenWash);
+
+            if (needsWash.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No clothes need washing right now! 🎉</p></div>';
+                return;
+            }
+
+            // Group by wash instructions
+            const groups = {};
+            needsWash.forEach(item => {
+                const key = `${item.washTemp}|${item.dryMethod}|${item.specialCare || 'none'}`;
+                if (!groups[key]) {
+                    groups[key] = {
+                        washTemp: item.washTemp,
+                        dryMethod: item.dryMethod,
+                        specialCare: item.specialCare,
+                        items: []
+                    };
+                }
+                groups[key].items.push(item);
+            });
+
+            container.innerHTML = Object.values(groups).map((group, index) => `
+                <div class="wash-group">
+                    <h3>Wash Group ${index + 1} (${group.items.length} items)</h3>
+                    <div class="clothes-info"><strong>Wash:</strong> ${group.washTemp}</div>
+                    <div class="clothes-info"><strong>Dry:</strong> ${group.dryMethod}</div>
+                    ${group.specialCare ? `<div class="clothes-info"><strong>Special Care:</strong> ${group.specialCare}</div>` : ''}
+                    <div class="wash-group-items" style="margin-top: 15px;">
+                        ${group.items.map(item => `
+                            <div class="wash-item">
+                                <span><strong>${item.name}</strong> (${item.category})</span>
+                                <button class="button" onclick="markAsWashed(${item.id})">Washed</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="button" onclick="markGroupAsWashed([${group.items.map(i => i.id).join(',')}])" style="margin-top: 15px;">Mark All Washed</button>
+                </div>
+            `).join('');
+        }
+
+        // Mark as washed
+        function markAsWashed(itemId) {
+            const item = clothesInventory.find(i => i.id === itemId);
+            if (item) {
+                item.wearsSinceWash = 0;
+                item.lastWashed = new Date().toISOString();
+                saveData();
+                renderInventory();
+                renderWashGroups();
+                alert(`${item.name} marked as washed!`);
+            }
+        }
+
+        // Mark group as washed
+        function markGroupAsWashed(itemIds) {
+            itemIds.forEach(id => {
+                const item = clothesInventory.find(i => i.id === id);
+                if (item) {
+                    item.wearsSinceWash = 0;
+                    item.lastWashed = new Date().toISOString();
+                }
+            });
+            saveData();
+            renderWashGroups();
+            alert('All items in group marked as washed!');
+        }
+
+        // Delete item
+        function deleteItem(itemId) {
+            if (confirm('Are you sure you want to delete this item?')) {
+                clothesInventory = clothesInventory.filter(i => i.id !== itemId);
+                saveData();
+                renderInventory();
+            }
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('clothesInventory', JSON.stringify(clothesInventory));
+        }
+
+        // Initial render
+        renderLogTab();
+    </script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+# AWS Credentials - NEVER COMMIT THESE!
+*.pem
+*.ppk
+aws-credentials.txt
+credentials.json
+.env
+
+# Local configuration with real credentials
+*-configured.html
+*-production.html
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor/IDE Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backup files
+*.bak
+*.backup
+*~.nib
